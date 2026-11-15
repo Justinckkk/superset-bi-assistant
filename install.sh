@@ -111,7 +111,7 @@ case "${1:-}" in
 esac
 
 [ "$has_claude$has_codex" != 00 ] || fail '请先安装 Claude Code 或 Codex CLI，再运行此命令。'
-for tool in curl plutil shasum awk mktemp; do command -v "$tool" >/dev/null 2>&1 || fail "缺少工具：$tool（需要 macOS）。"; done
+for tool in curl plutil shasum awk mktemp; do command -v "$tool" >/dev/null 2>&1 || fail "缺少工具：${tool}（需要 macOS）。"; done
 if [ -e "$STATE" ]; then
     [ -f "$STATE/owner" ] && [ "$(cat "$STATE/owner")" = "$REPO" ] || fail '安装状态来源不明，已停止。'
 fi
@@ -230,4 +230,4 @@ say '完成：在任何文件夹运行 claude 或 codex，直接问：森国昨�
 say "网页：$WEB_URL"
 say "更新/换 Key：curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh"
 say "卸载：curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh -s -- --uninstall"
-say "本机配置备份：$BACKUP（含旧凭据，请勿分享）"
+say "本机配置备份：${BACKUP}（含旧凭据，请勿分享）"
