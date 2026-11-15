@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s\\n' '仅当问游戏数据或创建修改 Superset 看板时，先完整读取 superset-bi 技能；无关编程不加载。'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

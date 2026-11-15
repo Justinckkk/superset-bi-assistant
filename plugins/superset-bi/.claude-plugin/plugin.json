@@ -1,0 +1,8 @@
+{
+  "name": "superset-bi",
+  "version": "1.0.0-t22.2519bc1e6ab0ebc1",
+  "description": "问游戏数据（森国、森之国度、万灵、风之大陆、真三国无双；活跃、付费、留存、LTV、商品、首充、流失），或创建、修改 Superset 看板时使用；不用于无关编程。",
+  "author": {
+    "name": "BI 团队"
+  }
+}
