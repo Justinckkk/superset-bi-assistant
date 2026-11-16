@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": "1.0.0-t22.4beb1ea995ab673d",
+  "version": "1.0.0-t22.ef1f79ce84547e9e",
   "generator_sha256": "b342408b741a4b5dbd97700fce3c8d45d88aed0a30dbb1637bc931e4f195863c",
   "source_sha256": {
     "AGENTS.md": "13adf12e4c22228840a49b87aca4d7b987f45bb93745caeff4c5024bdce6e258",
@@ -13,12 +13,12 @@
     "知识/指标词典.md": "0a593310c2dfaa0497ffe3c65e7e2857ff333a31fa5c7a84c84ca00d225cf1ec"
   },
   "template_sha256": {
-    "README.md": "63dff63f42a4ba2544867a798a932a3a337f1ffa56e91bf138712c28b8fb14d1",
+    "README.md": "179cd37d9ab8f0bbbad76e160d7a1fbed00fedf8d939d8566f6cf824fcbd4249",
     "install.sh": "5ab8ace75fef0ea80da76fe65d07e5d14de8534131dbec62461682bfbacd9b8c"
   },
   "output_sha256": {
-    ".claude-plugin/marketplace.json": "b5c32345ccdb66f5c0e3212e434d321c1bc63399c02d011a8378ee3334e96c09",
-    "README.md": "60c7b740d0063e50665b3b92385004e4cbe30614e6ef4c2d0048ea03fb721538",
+    ".claude-plugin/marketplace.json": "d9b9f6dab05a8c0d84508922dde1fdfaed230f2cc63af3238fcfe765ff22848e",
+    "README.md": "532b929a95635a3a86d3b846cd4efc69166d6b31c4a670406895f537cbe1b774",
     "codex/skills/superset-bi/SKILL.md": "777208c0c4b2b4806f4f50f4c3e7cfac09318533a953236331105b7d43813732",
     "codex/skills/superset-bi/事件速查.md": "c0c6538c5f41b70b915d33869893d9da89ce2a76da888a79b062a69ae71fab2f",
     "codex/skills/superset-bi/直接查询.md": "8f760b09968a9931169f409db21f8b136fecf1b144477fd46e47c67e5409fedd",
@@ -27,7 +27,7 @@
     "codex/skills/superset-bi/知识/报告模板.md": "1f962571ff3c239c0c177308d9e629cce48f1a53dd54063bc4b651bec8d6f0f7",
     "codex/skills/superset-bi/知识/指标词典.md": "0a593310c2dfaa0497ffe3c65e7e2857ff333a31fa5c7a84c84ca00d225cf1ec",
     "install.sh": "87036a3be1ab2109fb37029be45f5fbdbc95a8c553aa00632bb2aff2ff6ec59d",
-    "plugins/superset-bi/.claude-plugin/plugin.json": "a78a8244939212e0ddc1f75cd16d53c87615d3efffb1a5e575c29b4c48115fea",
+    "plugins/superset-bi/.claude-plugin/plugin.json": "d684314e59b6415e1f2fa5500ebb66b8d9d3bcda1851a3cf326fd2ba9ef8d032",
     "plugins/superset-bi/hooks/hooks.json": "151fdcfdf6a8fb737dfb00067210a8003b7303e7ce7b0dd4b2eb94d8059fdaf0",
     "plugins/superset-bi/skills/superset-bi/SKILL.md": "777208c0c4b2b4806f4f50f4c3e7cfac09318533a953236331105b7d43813732",
     "plugins/superset-bi/skills/superset-bi/事件速查.md": "c0c6538c5f41b70b915d33869893d9da89ce2a76da888a79b062a69ae71fab2f",

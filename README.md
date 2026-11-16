@@ -1,6 +1,8 @@
 # Superset 游戏 BI 助手
 
-先找管理员领取**网页账号、密码和个人 MCP Key**（不是同一个东西），并先安装 Claude Code 或 Codex CLI。需要 macOS 自带的 sh、curl、awk、plutil、shasum；安装时需联网访问 GitHub，问数需在办公网。
+先找管理员领取**网页账号、初始密码**，个人 MCP Key 可以由管理员一对一代发，也可以登录网页后自己创建（不是网页密码）。先安装 Claude Code 或 Codex CLI。需要 macOS 自带的 sh、curl、awk、plutil、shasum；安装时需联网访问 GitHub，问数需在办公网。
+
+**自己创建 Key**：右上角「设置」→「信息」（`/user_info/`）→「API 密钥 / API Keys」→「创建 API 密钥 / Create API Key」，填写名称后创建。明文只显示一次，立即复制供安装时输入；列表只显示自己的记录与前缀，丢失就撤销重建。**改密码**：同页点「重置我的密码 / Reset my password」，填当前密码、新密码和确认密码后保存，再用新密码登录；备用地址为网页地址后的 `/resetmypassword/form`，填写两遍新密码。初始密码改过后不再有效。
 
 在终端粘贴一条命令（Key 隐藏输入，只问一次）：
 
@@ -12,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/Justinckkk/superset-bi-assistant/ma
 Claude 可显式调用 `/superset-bi:superset-bi`，Codex 可用 `$superset-bi`；重开会话后用 `/skills`、`/mcp` 检查加载与连接。自动触发不是强制安全边界。
 仅手工装 Claude 插件（不含 MCP 配置）可用 `/plugin install superset-bi --marketplace Justinckkk/superset-bi-assistant`；完整安装请仍用上面一条命令。
 
-网页：http://192.168.40.72:18090（用管理员给的网页账号登录）。例如：
+网页：http://192.168.40.72:18090 （用管理员给的网页账号登录）。例如：
 - 万灵最近七个完整日的活跃和付费趋势怎么样？
 - 风之大陆上周的首充转化率是多少？
 - 帮我新建一个森国新增、活跃、收入三图看板。
