@@ -177,7 +177,7 @@ fetch_skill() {
     printf '%s  %s\n' "$expected" "$relative" >>"$TEMP/skill/.superset-bi-owned"
 }
 if [ "$has_codex" = 1 ]; then
-fetch_skill SKILL.md codex/skills/superset-bi/SKILL.md 777208c0c4b2b4806f4f50f4c3e7cfac09318533a953236331105b7d43813732
+fetch_skill SKILL.md codex/skills/superset-bi/SKILL.md 63848c4400a2fa2aac36714484e0a5d180c6957a6bdba7feca780aa2bb44155b
 fetch_skill '事件速查.md' codex/skills/superset-bi/%E4%BA%8B%E4%BB%B6%E9%80%9F%E6%9F%A5.md c0c6538c5f41b70b915d33869893d9da89ce2a76da888a79b062a69ae71fab2f
 fetch_skill '直接查询.md' codex/skills/superset-bi/%E7%9B%B4%E6%8E%A5%E6%9F%A5%E8%AF%A2.md 8f760b09968a9931169f409db21f8b136fecf1b144477fd46e47c67e5409fedd
 fetch_skill '知识/主题边界.md' codex/skills/superset-bi/%E7%9F%A5%E8%AF%86/%E4%B8%BB%E9%A2%98%E8%BE%B9%E7%95%8C.md ed7ca543d443621fb0b9a16f58467f9265efab44b41db1438a9e5eb21f5c5f95
