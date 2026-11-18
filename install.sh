@@ -3,6 +3,10 @@ set +x
 set -eu
 umask 077
 
+unset PERSONAL_KEY
+PERSONAL_KEY=${SUPERSET_BI_KEY:-}
+unset SUPERSET_BI_KEY
+
 REPO='Justinckkk/superset-bi-assistant'
 MCP_URL='http://192.168.40.72:15008/mcp'
 WEB_URL='http://192.168.40.72:18090'
@@ -35,15 +39,38 @@ safe_path() {
 }
 for target in "$STATE" "$CLAUDE_DIR" "$CLAUDE_JSON" "$CODEX_DIR" "$CODEX_DIR/config.toml" "$SKILL" "$HOME/.local/state/superset-bi-assistant-backups"; do safe_path "$target"; done
 
-has_claude=0
-has_codex=0
-command -v claude >/dev/null 2>&1 && has_claude=1
-command -v codex >/dev/null 2>&1 && has_codex=1
+find_claude() {
+    if command -v claude; then return; fi
+    if [ -n "${CLAUDE_CODE_EXECPATH:-}" ] && [ -f "$CLAUDE_CODE_EXECPATH" ] && [ -x "$CLAUDE_CODE_EXECPATH" ]; then
+        say "$CLAUDE_CODE_EXECPATH"
+        return
+    fi
+    desktop_root="$HOME/Library/Application Support/Claude/claude-code"
+    for directory in "$desktop_root"/*; do
+        version=${directory##*/}
+        case "$version" in *[!0-9.]*) continue ;; esac
+        [ ! -d "$directory" ] || say "$version"
+    done | LC_ALL=C sort -Vr | while IFS= read -r version; do
+        for executable in "$desktop_root/$version"/*/claude.app/Contents/MacOS/claude; do
+            if [ -f "$executable" ] && [ -x "$executable" ]; then say "$executable"; exit; fi
+        done
+    done
+}
+CLAUDE_BIN=$(find_claude)
+CODEX_BIN=$(command -v codex || :)
+
+no_client() {
+    fail '没有找到可用的 Claude Code 或 Codex。你可以：
+1. 打开平时用的 AI 助手（Claude 桌面端请用 Code 标签页），把 README 里的安装句子发给它。
+2. 或先在终端安装官方命令行，再重跑本脚本：
+   Claude Code：curl -fsSL https://claude.ai/install.sh | bash
+   Codex（需 npm）：npm install -g @openai/codex'
+}
 
 backup() {
     if [ -f "$1" ]; then cp -p "$1" "$BACKUP/$2"; chmod 600 "$BACKUP/$2"; fi
 }
-fingerprint_codex() { codex mcp get superset --json </dev/null 2>/dev/null | shasum -a 256 | awk '{print $1}'; }
+fingerprint_codex() { "$CODEX_BIN" mcp get superset --json </dev/null 2>/dev/null | shasum -a 256 | awk '{print $1}'; }
 fingerprint_claude() { plutil -extract mcpServers.superset json -o - "$CLAUDE_JSON" 2>/dev/null | shasum -a 256 | awk '{print $1}'; }
 make_backup() {
     mkdir -p "$HOME/.local/state/superset-bi-assistant-backups"
@@ -67,31 +94,31 @@ case "${1:-}" in
     --uninstall)
         [ -f "$STATE/owner" ] || { say '未发现本安装器的记录，无需卸载。'; exit 0; }
         [ "$(cat "$STATE/owner")" = "$REPO" ] || fail '安装来源不同，未删除。'
+        [ -n "$CLAUDE_BIN" ] || { [ ! -f "$STATE/claude-mcp" ] && [ ! -f "$STATE/plugin" ] && [ ! -f "$STATE/marketplace" ]; } || no_client
+        [ -n "$CODEX_BIN" ] || [ ! -f "$STATE/codex-mcp" ] || fail '卸载 Codex 配置需要 PATH 中的 Codex CLI。'
         TEMP=$(mktemp -d "${TMPDIR:-/tmp}/superset-bi.XXXXXX")
         make_backup
         incomplete=0
         if [ -f "$STATE/claude-mcp" ]; then
-            [ "$has_claude" = 1 ] || fail '卸载 Claude 配置需要 claude CLI。'
             if [ "$(fingerprint_claude)" = "$(cat "$STATE/claude-mcp")" ]; then
-                quiet claude mcp remove --scope user superset
+                quiet "$CLAUDE_BIN" mcp remove --scope user superset
                 if [ -f "$STATE/original-claude.json" ]; then
-                    quiet claude mcp add-json --scope user superset "$(cat "$STATE/original-claude.json")"
+                    quiet "$CLAUDE_BIN" mcp add-json --scope user superset "$(cat "$STATE/original-claude.json")"
                 fi
                 rm "$STATE/claude-mcp"
             else say 'Claude 同名连接已改变，保留；请人工处理。'; incomplete=1; fi
         fi
         if [ -f "$STATE/plugin" ]; then
-            quiet claude plugin uninstall --scope user superset-bi@superset-bi
+            quiet "$CLAUDE_BIN" plugin uninstall --scope user superset-bi@superset-bi
             rm "$STATE/plugin"
         fi
         if [ -f "$STATE/marketplace" ]; then
-            quiet claude plugin marketplace remove superset-bi
+            quiet "$CLAUDE_BIN" plugin marketplace remove superset-bi
             rm "$STATE/marketplace"
         fi
         if [ -f "$STATE/codex-mcp" ]; then
-            [ "$has_codex" = 1 ] || fail '卸载 Codex 配置需要 codex CLI。'
             if [ "$(fingerprint_codex)" = "$(cat "$STATE/codex-mcp")" ]; then
-                quiet codex mcp remove superset
+                quiet "$CODEX_BIN" mcp remove superset
                 chmod 600 "$CODEX_DIR/config.toml"
                 rm "$STATE/codex-mcp"
             else say 'Codex 同名连接已改变，保留；请人工处理。'; incomplete=1; fi
@@ -110,43 +137,48 @@ case "${1:-}" in
     *) fail '用法：sh install.sh [--uninstall]' ;;
 esac
 
-[ "$has_claude$has_codex" != 00 ] || fail '请先安装 Claude Code 或 Codex CLI，再运行此命令。'
+[ -n "$CLAUDE_BIN$CODEX_BIN" ] || no_client
 for tool in curl plutil shasum awk mktemp; do command -v "$tool" >/dev/null 2>&1 || fail "缺少工具：${tool}（需要 macOS）。"; done
 if [ -e "$STATE" ]; then
     [ -f "$STATE/owner" ] && [ "$(cat "$STATE/owner")" = "$REPO" ] || fail '安装状态来源不明，已停止。'
 fi
 if [ -e "$SKILL" ] && [ ! -f "$STATE/skill" ]; then fail '已有非本安装器管理的同名技能，未覆盖。'; fi
 if [ -e "$SKILL" ] && ! skill_unchanged; then fail '本机技能已手改，未覆盖；请先备份并人工处理。'; fi
-if [ -f "$STATE/codex-mcp" ] && [ "$(fingerprint_codex)" != "$(cat "$STATE/codex-mcp")" ]; then
-    fail 'Codex 同名连接已手改，未覆盖；请先人工处理。'
+if [ -f "$STATE/codex-mcp" ]; then
+    [ -n "$CODEX_BIN" ] || fail '检查现有 Codex 配置需要 PATH 中的 Codex CLI。'
+    [ "$(fingerprint_codex)" = "$(cat "$STATE/codex-mcp")" ] || fail 'Codex 同名连接已手改，未覆盖；请先人工处理。'
 fi
 if [ -f "$STATE/claude-mcp" ] && [ "$(fingerprint_claude)" != "$(cat "$STATE/claude-mcp")" ]; then
     fail 'Claude 同名连接已手改，未覆盖；请先人工处理。'
 fi
-if [ "$has_codex" = 1 ] && [ ! -f "$STATE/codex-mcp" ]; then
-    if codex mcp get superset --json </dev/null >/dev/null 2>&1; then
+if [ -n "$CODEX_BIN" ] && [ ! -f "$STATE/codex-mcp" ]; then
+    if "$CODEX_BIN" mcp get superset --json </dev/null >/dev/null 2>&1; then
         fail 'Codex 已有非本安装器管理的同名连接，未覆盖；请先人工备份和移除。'
     fi
 fi
-if [ "$has_claude" = 1 ] && [ ! -f "$STATE/plugin" ]; then
+if [ -n "$CLAUDE_BIN" ] && [ ! -f "$STATE/plugin" ]; then
     if plutil -extract 'plugins.superset-bi@superset-bi' json -o - "$CLAUDE_DIR/plugins/installed_plugins.json" >/dev/null 2>&1; then
         fail '已有非本安装器管理的同名插件，未覆盖。'
     fi
 fi
-if [ "$has_claude" = 1 ] && [ ! -f "$STATE/marketplace" ]; then
+if [ -n "$CLAUDE_BIN" ] && [ ! -f "$STATE/marketplace" ]; then
     if plutil -extract superset-bi json -o - "$CLAUDE_DIR/plugins/known_marketplaces.json" >/dev/null 2>&1; then
         fail '已有非本安装器管理的同名 marketplace，未覆盖。'
     fi
 fi
 
-if ! ( : </dev/tty ) 2>/dev/null; then fail '没有交互终端；请在本人终端运行以隐藏输入 Key。'; fi
-TTY_STATE=$(stty -g </dev/tty) || fail '无法读取终端状态。'
-stty -echo </dev/tty || fail '无法关闭终端回显。'
-printf '%s' '个人 MCP Key（隐藏输入，只问一次）：' >/dev/tty
-IFS= read -r PERSONAL_KEY </dev/tty || fail '未读到 Key，已取消。'
-stty "$TTY_STATE" </dev/tty
-TTY_STATE=''
-printf '\n' >/dev/tty
+if [ -z "$PERSONAL_KEY" ]; then
+    if ! ( : </dev/tty ) 2>/dev/null; then
+        fail '没有交互终端，也没有收到个人 MCP Key。请让助手按 INSTALL.md 将 Key 通过 SUPERSET_BI_KEY 传给 sh，或在终端用隐藏输入重试。'
+    fi
+    TTY_STATE=$(stty -g </dev/tty) || fail '无法读取终端状态。'
+    stty -echo </dev/tty || fail '无法关闭终端回显。'
+    printf '%s' '个人 MCP Key（隐藏输入，只问一次）：' >/dev/tty
+    IFS= read -r PERSONAL_KEY </dev/tty || fail '未读到 Key，已取消。'
+    stty "$TTY_STATE" </dev/tty
+    TTY_STATE=''
+    printf '\n' >/dev/tty
+fi
 case "$PERSONAL_KEY" in ''|*[!A-Za-z0-9._~+/-]*) fail 'Key 为空或含不支持的字符，已取消。';; esac
 TEMP=$(mktemp -d "${TMPDIR:-/tmp}/superset-bi.XXXXXX")
 printf 'header = "Authorization: Bearer %s"\n' "$PERSONAL_KEY" >"$TEMP/curl.conf"
@@ -176,7 +208,7 @@ fetch_skill() {
     [ "$actual" = "$expected" ] || fail '下载内容与安装器版本不一致；未更改配置，请重新获取安装命令。'
     printf '%s  %s\n' "$expected" "$relative" >>"$TEMP/skill/.superset-bi-owned"
 }
-if [ "$has_codex" = 1 ]; then
+if [ -n "$CODEX_BIN" ]; then
 fetch_skill SKILL.md codex/skills/superset-bi/SKILL.md 63848c4400a2fa2aac36714484e0a5d180c6957a6bdba7feca780aa2bb44155b
 fetch_skill '事件速查.md' codex/skills/superset-bi/%E4%BA%8B%E4%BB%B6%E9%80%9F%E6%9F%A5.md c0c6538c5f41b70b915d33869893d9da89ce2a76da888a79b062a69ae71fab2f
 fetch_skill '直接查询.md' codex/skills/superset-bi/%E7%9B%B4%E6%8E%A5%E6%9F%A5%E8%AF%A2.md 8f760b09968a9931169f409db21f8b136fecf1b144477fd46e47c67e5409fedd
@@ -189,33 +221,33 @@ fi
 make_backup
 mkdir -p "$STATE"
 printf '%s\n' "$REPO" >"$STATE/owner"
-if [ "$has_claude" = 1 ]; then
+if [ -n "$CLAUDE_BIN" ]; then
     if [ ! -f "$STATE/claude-captured" ]; then
         plutil -extract mcpServers.superset json -o "$TEMP/original.json" "$CLAUDE_JSON" >/dev/null 2>&1 && cp "$TEMP/original.json" "$STATE/original-claude.json"
         : >"$STATE/claude-captured"
     fi
-    if [ -f "$STATE/marketplace" ]; then quiet claude plugin marketplace update superset-bi
+    if [ -f "$STATE/marketplace" ]; then quiet "$CLAUDE_BIN" plugin marketplace update superset-bi
     else
-        quiet claude plugin marketplace add --scope user "$REPO"
+        quiet "$CLAUDE_BIN" plugin marketplace add --scope user "$REPO"
         : >"$STATE/marketplace"
     fi
-    if [ -f "$STATE/plugin" ]; then quiet claude plugin update --scope user superset-bi@superset-bi
+    if [ -f "$STATE/plugin" ]; then quiet "$CLAUDE_BIN" plugin update --scope user superset-bi@superset-bi
     else
-        quiet claude plugin install --scope user superset-bi@superset-bi
+        quiet "$CLAUDE_BIN" plugin install --scope user superset-bi@superset-bi
         : >"$STATE/plugin"
     fi
-    claude mcp remove --scope user superset </dev/null >/dev/null 2>&1 || :
+    "$CLAUDE_BIN" mcp remove --scope user superset </dev/null >/dev/null 2>&1 || :
     say 'Claude CLI 的 header 参数会在进程列表短暂可见；只在可信电脑安装。'
-    quiet claude mcp add --scope user --transport http superset "$MCP_URL" --header "Authorization: Bearer $PERSONAL_KEY"
+    quiet "$CLAUDE_BIN" mcp add --scope user --transport http superset "$MCP_URL" --header "Authorization: Bearer $PERSONAL_KEY"
     chmod 600 "$CLAUDE_JSON"
     fingerprint_claude >"$STATE/claude-mcp"
     say '已安装 Claude Code 用户级插件、SessionStart 路由提示和 superset HTTP 连接。'
 fi
-if [ "$has_codex" = 1 ]; then
+if [ -n "$CODEX_BIN" ]; then
     mkdir -p "$CODEX_DIR" "$HOME/.agents/skills"
-    if [ -f "$STATE/codex-mcp" ]; then quiet codex mcp remove superset; fi
-    quiet codex mcp add superset --url "$MCP_URL"
-    quiet codex mcp remove superset
+    if [ -f "$STATE/codex-mcp" ]; then quiet "$CODEX_BIN" mcp remove superset; fi
+    quiet "$CODEX_BIN" mcp add superset --url "$MCP_URL"
+    quiet "$CODEX_BIN" mcp remove superset
     printf '\n[mcp_servers.superset]\nurl = "%s"\n[mcp_servers.superset.http_headers]\nAuthorization = "Bearer %s"\n' "$MCP_URL" "$PERSONAL_KEY" >>"$CODEX_DIR/config.toml"
     chmod 600 "$CODEX_DIR/config.toml"
     fingerprint_codex >"$STATE/codex-mcp"
@@ -226,7 +258,7 @@ if [ "$has_codex" = 1 ]; then
     say '已安装 Codex 用户级 superset-bi 技能和静态 HTTP 头连接；未改 shell 配置。'
 fi
 unset PERSONAL_KEY
-say '完成：在任何文件夹运行 claude 或 codex，直接问：森国昨天的新增是多少。请重开旧会话。'
+say '完成：在 Claude Code（桌面端 Code 标签页或命令行）或 Codex 新开对话，再问：森国昨天的新增是多少。'
 say "网页：$WEB_URL"
 say "更新/换 Key：curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh"
 say "卸载：curl -fsSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh -s -- --uninstall"
